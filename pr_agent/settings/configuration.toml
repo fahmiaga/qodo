@@ -69,6 +69,10 @@ enable_auto_approval=false # Set to true to enable auto-approval of PRs under ce
 auto_approve_for_low_review_effort=-1 # -1 to disable, [1-5] to set the threshold for auto-approval
 auto_approve_for_no_suggestions=false # If true, the PR will be auto-approved if there are no suggestions
 ensure_ticket_compliance=false # Set to true to disable auto-approval of PRs if the ticket is not compliant
+# auto large PR labeling
+enable_auto_large_pr_label=false # Set to true to enable automatic labeling of large PRs
+auto_label_large_pr_threshold=500 # Number of total changes (additions + deletions) to consider PR as "large"
+auto_label_large_pr_label_name="needs-staging-test" # Label name to apply to large PRs
 # extended thinking for Claude reasoning models
 enable_claude_extended_thinking = false # Set to true to enable extended thinking feature
 extended_thinking_budget_tokens = 2048
