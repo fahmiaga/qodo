@@ -9,6 +9,7 @@ from pr_agent.git_providers import get_git_provider
 from pr_agent.git_providers.utils import apply_repo_settings
 from pr_agent.log import get_logger
 from pr_agent.servers.github_app import handle_line_comments
+from pr_agent.tools.pr_auto_labeler import PRAutoLabeler
 from pr_agent.tools.pr_code_suggestions import PRCodeSuggestions
 from pr_agent.tools.pr_description import PRDescription
 from pr_agent.tools.pr_reviewer import PRReviewer
@@ -129,6 +130,12 @@ async def run_action():
                 get_settings().config.is_auto_command = True  # Set the flag to indicate that the command is auto
                 get_settings().pr_description.final_update_message = False  # No final update message when auto_describe is enabled
                 get_logger().info(f"Running auto actions: auto_describe={auto_describe}, auto_review={auto_review}, auto_improve={auto_improve}")
+
+                # Run auto-labeler (non-blocking, errors don't affect main flow)
+                try:
+                    await PRAutoLabeler(pr_url).run()
+                except Exception as e:
+                    get_logger().warning(f"Auto-labeler failed for PR {pr_url}: {e}")
 
                 # invoke by default all three tools
                 if auto_describe is None or is_true(auto_describe):
