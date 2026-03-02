@@ -132,10 +132,16 @@ async def run_action():
                 get_logger().info(f"Running auto actions: auto_describe={auto_describe}, auto_review={auto_review}, auto_improve={auto_improve}")
 
                 # Run auto-labeler (non-blocking, errors don't affect main flow)
+                get_logger().info(f"Starting auto-labeler for PR: {pr_url}")
                 try:
-                    await PRAutoLabeler(pr_url).run()
+                    get_logger().info(f"Instantiating PRAutoLabeler with pr_url: {pr_url}")
+                    auto_labeler = PRAutoLabeler(pr_url)
+                    get_logger().info(f"Running auto-labeler...")
+                    result = await auto_labeler.run()
+                    get_logger().info(f"Auto-labeler completed with result: {result}")
                 except Exception as e:
-                    get_logger().warning(f"Auto-labeler failed for PR {pr_url}: {e}")
+                    import traceback
+                    get_logger().error(f"Auto-labeler failed for PR {pr_url}: {e}", artifact={"error": str(e), "traceback": traceback.format_exc()})
 
                 # invoke by default all three tools
                 if auto_describe is None or is_true(auto_describe):
