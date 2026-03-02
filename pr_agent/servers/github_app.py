@@ -23,6 +23,7 @@ from pr_agent.identity_providers import get_identity_provider
 from pr_agent.identity_providers.identity_provider import Eligibility
 from pr_agent.log import LoggingFormat, get_logger, setup_logger
 from pr_agent.servers.utils import DefaultDictWithTimeout, verify_signature
+from pr_agent.tools.pr_auto_labeler import PRAutoLabeler
 
 setup_logger(fmt=LoggingFormat.JSON, level=get_settings().get("CONFIG.LOG_LEVEL", "DEBUG"))
 base_path = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
@@ -121,6 +122,27 @@ async def handle_comments_on_pr(body: Dict[str, Any],
         else:
             get_logger().info(f"User {sender=} is not eligible to process comment on PR {api_url=}")
 
+async def _run_auto_labeler(api_url: str, log_context: Dict[str, Any]):
+    """
+    Helper function to run the auto-labeler for a PR.
+    
+    This ensures automatic labels are applied based on PR size without
+    breaking the main PR processing flow. Errors are logged but don't
+    prevent other PR processing from continuing.
+    
+    Args:
+        api_url: The PR URL
+        log_context: Logging context for tracking
+    """
+    try:
+        with get_logger().contextualize(**log_context):
+            get_logger().info(f"Running auto-labeler for PR {api_url}")
+            auto_labeler = PRAutoLabeler(api_url)
+            await auto_labeler.run()
+    except Exception as e:
+        get_logger().warning(f"Auto-labeler failed for PR {api_url}: {e}", 
+                           artifact={"error": str(e)})
+
 async def handle_new_pr_opened(body: Dict[str, Any],
                                event: str,
                                sender: str,
@@ -137,6 +159,10 @@ async def handle_new_pr_opened(body: Dict[str, Any],
     if action in get_settings().github_app.handle_pr_actions:  # ['opened', 'reopened', 'ready_for_review']
         # logic to ignore PRs with specific titles (e.g. "[Auto] ...")
         apply_repo_settings(api_url)
+        
+        # Run auto-labeler (non-blocking, errors don't affect main flow)
+        await _run_auto_labeler(api_url, log_context)
+        
         if get_identity_provider().verify_eligibility("github", sender_id, api_url) is not Eligibility.NOT_ELIGIBLE:
             await _perform_auto_commands_github("pr_commands", agent, body, api_url, log_context)
         else:
@@ -197,6 +223,10 @@ async def handle_push_trigger_for_new_commits(body: Dict[str, Any],
     try:
         if get_identity_provider().verify_eligibility("github", sender_id, api_url) is not Eligibility.NOT_ELIGIBLE:
             get_logger().info(f"Performing incremental review for {api_url=} because of {event=} and {action=}")
+            
+            # Run auto-labeler (non-blocking, errors don't affect main flow)
+            await _run_auto_labeler(api_url, log_context)
+            
             await _perform_auto_commands_github("push_commands", agent, body, api_url, log_context)
 
     finally:

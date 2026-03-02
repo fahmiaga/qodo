@@ -9,6 +9,7 @@ from pr_agent.git_providers import get_git_provider
 from pr_agent.git_providers.utils import apply_repo_settings
 from pr_agent.log import get_logger
 from pr_agent.servers.github_app import handle_line_comments
+from pr_agent.tools.pr_auto_labeler import PRAutoLabeler
 from pr_agent.tools.pr_code_suggestions import PRCodeSuggestions
 from pr_agent.tools.pr_description import PRDescription
 from pr_agent.tools.pr_reviewer import PRReviewer
@@ -129,6 +130,19 @@ async def run_action():
                 get_settings().config.is_auto_command = True  # Set the flag to indicate that the command is auto
                 get_settings().pr_description.final_update_message = False  # No final update message when auto_describe is enabled
                 get_logger().info(f"Running auto actions: auto_describe={auto_describe}, auto_review={auto_review}, auto_improve={auto_improve}")
+
+                # Run auto-labeler (non-blocking, errors don't affect main flow)
+                try:
+                    get_logger().info(f"[AUTO-LABELER] Starting for PR: {pr_url}")
+                    get_logger().info(f"[AUTO-LABELER] Enable flag: {get_settings().config.enable_auto_large_pr_label}")
+                    get_logger().info(f"[AUTO-LABELER] Instantiating PRAutoLabeler...")
+                    auto_labeler = PRAutoLabeler(pr_url)
+                    get_logger().info(f"[AUTO-LABELER] Running...")
+                    result = await auto_labeler.run()
+                    get_logger().info(f"[AUTO-LABELER] Completed. Result: {result}")
+                except Exception as e:
+                    import traceback
+                    get_logger().error(f"[AUTO-LABELER] FAILED: {str(e)}", artifact={"error": str(e), "traceback": traceback.format_exc()})
 
                 # invoke by default all three tools
                 if auto_describe is None or is_true(auto_describe):
