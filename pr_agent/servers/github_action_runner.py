@@ -132,16 +132,17 @@ async def run_action():
                 get_logger().info(f"Running auto actions: auto_describe={auto_describe}, auto_review={auto_review}, auto_improve={auto_improve}")
 
                 # Run auto-labeler (non-blocking, errors don't affect main flow)
-                get_logger().info(f"Starting auto-labeler for PR: {pr_url}")
                 try:
-                    get_logger().info(f"Instantiating PRAutoLabeler with pr_url: {pr_url}")
+                    get_logger().info(f"[AUTO-LABELER] Starting for PR: {pr_url}")
+                    get_logger().info(f"[AUTO-LABELER] Enable flag: {get_settings().config.enable_auto_large_pr_label}")
+                    get_logger().info(f"[AUTO-LABELER] Instantiating PRAutoLabeler...")
                     auto_labeler = PRAutoLabeler(pr_url)
-                    get_logger().info(f"Running auto-labeler...")
+                    get_logger().info(f"[AUTO-LABELER] Running...")
                     result = await auto_labeler.run()
-                    get_logger().info(f"Auto-labeler completed with result: {result}")
+                    get_logger().info(f"[AUTO-LABELER] Completed. Result: {result}")
                 except Exception as e:
                     import traceback
-                    get_logger().error(f"Auto-labeler failed for PR {pr_url}: {e}", artifact={"error": str(e), "traceback": traceback.format_exc()})
+                    get_logger().error(f"[AUTO-LABELER] FAILED: {str(e)}", artifact={"error": str(e), "traceback": traceback.format_exc()})
 
                 # invoke by default all three tools
                 if auto_describe is None or is_true(auto_describe):
