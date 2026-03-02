@@ -25,6 +25,7 @@ class PRSizeEvaluator:
         Returns:
             Tuple of (total_additions, total_deletions, total_changes)
         """
+        get_logger().info(f"[PRSizeEvaluator] calculate_total_changes called with {len(diff_files)} files")
         total_additions = 0
         total_deletions = 0
 
@@ -84,6 +85,7 @@ class PRSizeEvaluator:
         Returns:
             List of label names to apply
         """
+        get_logger().info(f"[PRSizeEvaluator] get_auto_labels called")
         labels = []
 
         # Check for large PR label
